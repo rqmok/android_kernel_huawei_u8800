@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,9 +20,9 @@
 #include <linux/msm_kgsl.h>
 #include <linux/android_pmem.h>
 #include <linux/regulator/machine.h>
+#include <linux/init.h>
 #include <mach/irqs.h>
 #include <mach/msm_iomap.h>
-#include <mach/msm_smsm.h>
 #include <mach/dma.h>
 #include <mach/board.h>
 #include <asm/clkdev.h>
@@ -41,20 +41,6 @@
 #include <mach/dal_axi.h>
 #include <mach/msm_memtypes.h>
 
-void config_gpio_table_dbg(uint32_t *table, int len, char *file, int line)
-{
-	int n, rc;
-	for (n = 0; n < len; n++) {
-		rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
-		if (rc) {
-			pr_err("%s: gpio_tlmm_config(%#x)[%d]=%d (%s:%d)\n",
-			       __func__, table[n], n, rc, file, line);
-			break;
-		}
-	}
-}
-
-unsigned long msm_fb_base;
 /* EBI THERMAL DRIVER */
 static struct resource msm_ebi0_thermal_resources[] = {
 	{
@@ -112,6 +98,7 @@ static struct resource resources_uart2[] = {
 		.start	= MSM_UART2_PHYS,
 		.end	= MSM_UART2_PHYS + MSM_UART2_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
+		.name  = "uart_resource"
 	},
 };
 
@@ -137,14 +124,14 @@ struct platform_device msm_device_uart1 = {
 
 struct platform_device msm_device_uart2 = {
 	.name	= "msm_serial",
-	.id	= 0, /* ori: 1 */
+	.id	= 1,
 	.num_resources	= ARRAY_SIZE(resources_uart2),
 	.resource	= resources_uart2,
 };
 
 struct platform_device msm_device_uart3 = {
 	.name	= "msm_serial",
-	.id	= 0, /* ori: 2 */
+	.id	= 2,
 	.num_resources	= ARRAY_SIZE(resources_uart3),
 	.resource	= resources_uart3,
 };
@@ -280,48 +267,6 @@ struct platform_device msm_device_i2c = {
 	.resource	= resources_i2c,
 };
 
-static struct resource qsd_spi_resources[] = {
-	{
-		.name   = "spi_irq_in",
-		.start	= INT_SPI_INPUT,
-		.end	= INT_SPI_INPUT,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name   = "spi_irq_out",
-		.start	= INT_SPI_OUTPUT,
-		.end	= INT_SPI_OUTPUT,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name   = "spi_irq_err",
-		.start	= INT_SPI_ERROR,
-		.end	= INT_SPI_ERROR,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name   = "spi_base",
-		.start	= MSM_SPI_PHYS,
-		.end	= MSM_SPI_PHYS + MSM_SPI_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.name   = "spidm_channels",
-		.flags  = IORESOURCE_DMA,
-	},
-	{
-		.name   = "spidm_crci",
-		.flags  = IORESOURCE_DMA,
-	},
-};
-
-struct platform_device qsd_device_spi = {
-	.name		= "spi_qsd",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(qsd_spi_resources),
-	.resource	= qsd_spi_resources,
-};
-
 #define MSM_QUP_PHYS           0xA8301000
 #define MSM_GSBI_QUP_I2C_PHYS  0xA8300000
 #define MSM_QUP_SIZE           SZ_4K
@@ -356,18 +301,6 @@ static struct resource resources_qup[] = {
 		.end	= INT_PWB_QUP_ERR,
 		.flags	= IORESOURCE_IRQ,
 	},
-	{
-		.name	= "i2c_clk",
-		.start	= 16,
-		.end	= 16,
-		.flags	= IORESOURCE_IO,
-	},
-	{
-		.name	= "i2c_sda",
-		.start	= 17,
-		.end	= 17,
-		.flags	= IORESOURCE_IO,
-	},
 };
 
 struct platform_device qup_device_i2c = {
@@ -396,23 +329,6 @@ struct platform_device msm_device_ssbi_pmic1 = {
 #endif
 
 #ifdef CONFIG_I2C_SSBI
-#define MSM_SSBI6_PHYS	0xAD900000
-static struct resource msm_ssbi6_resources[] = {
-	{
-		.name   = "ssbi_base",
-		.start	= MSM_SSBI6_PHYS,
-		.end	= MSM_SSBI6_PHYS + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-struct platform_device msm_device_ssbi6 = {
-	.name		= "i2c_ssbi",
-	.id		= 6,
-	.num_resources	= ARRAY_SIZE(msm_ssbi6_resources),
-	.resource	= msm_ssbi6_resources,
-};
-
 #define MSM_SSBI7_PHYS  0xAC800000
 static struct resource msm_ssbi7_resources[] = {
 	{
@@ -631,14 +547,12 @@ static struct resource resources_otg[] = {
 		.end	= INT_USB_HS,
 		.flags	= IORESOURCE_IRQ,
 	},
-#ifdef CONFIG_PMIC8058
 	{
 		.name	= "vbus_on",
 		.start	= PMIC8058_IRQ_BASE + PM8058_CHGVAL_IRQ,
 		.end	= PMIC8058_IRQ_BASE + PM8058_CHGVAL_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
-#endif
 };
 
 struct platform_device msm_device_otg = {
@@ -861,73 +775,67 @@ int __init msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
 	pdev->dev.platform_data = plat;
 	return platform_device_register(pdev);
 }
-
-static struct resource resources_mddi0[] = {
-	{
-		.start	= MSM_PMDH_PHYS,
-		.end	= MSM_PMDH_PHYS + MSM_PMDH_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= INT_MDDI_PRI,
-		.end	= INT_MDDI_PRI,
-		.flags	= IORESOURCE_IRQ,
-	},
+/* <BU5D08126 duangan 2010-4-24 begin */
+#ifdef CONFIG_HUAWEI_FEATURE_OEMINFO
+static struct resource rmt_oeminfo_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
 };
 
-static struct resource resources_mddi1[] = {
-	{
-		.start	= MSM_EMDH_PHYS,
-		.end	= MSM_EMDH_PHYS + MSM_EMDH_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= INT_MDDI_EXT,
-		.end	= INT_MDDI_EXT,
-		.flags	= IORESOURCE_IRQ,
-	},
+static struct platform_device rmt_oeminfo_device = {
+       .name           = "rmt_oeminfo",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(rmt_oeminfo_resources),
+       .resource       = rmt_oeminfo_resources,
 };
 
-struct platform_device msm_device_mddi0 = {
-	.name = "msm_mddi",
-	.id = 0,
-	.num_resources = ARRAY_SIZE(resources_mddi0),
-	.resource = resources_mddi0,
-	.dev            = {
-		.coherent_dma_mask      = 0xffffffff,
-	},
+int __init rmt_oeminfo_add_device(void)
+{
+  platform_device_register(&rmt_oeminfo_device);
+  return 0;
+}
+#endif
+/* BU5D08126 duangan 2010-4-24 end> */
+
+/* <DTS2010092002892 duangan 20100926 begin */
+#ifdef CONFIG_HUAWEI_KERNEL
+static struct resource hw_extern_sdcard_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
 };
 
-struct platform_device msm_device_mddi1 = {
-	.name = "msm_mddi",
-	.id = 1,
-	.num_resources = ARRAY_SIZE(resources_mddi1),
-	.resource = resources_mddi1,
-	.dev            = {
-		.coherent_dma_mask      = 0xffffffff,
-	}
+static struct platform_device hw_extern_sdcard_device = {
+       .name           = "hw_extern_sdcard",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(hw_extern_sdcard_resources),
+       .resource       = hw_extern_sdcard_resources,
+};
+/* <DTS2011062802725 zhengzhechu 20110630 begin */
+static struct resource hw_extern_sdcardMounted_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
 };
 
-static struct resource resources_mdp[] = {
-	{
-		.start	= MSM_MDP_PHYS,
-		.end	= MSM_MDP_PHYS + MSM_MDP_SIZE - 1,
-		.name	= "mdp",
-		.flags	= IORESOURCE_MEM
-	},
-	{
-		.start	= INT_MDP,
-		.end	= INT_MDP,
-		.flags	= IORESOURCE_IRQ,
-	},
+static struct platform_device hw_extern_sdcardMounted_device = {
+       .name           = "hw_extern_sdcardMounted",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(hw_extern_sdcardMounted_resources),
+       .resource       = hw_extern_sdcardMounted_resources,
 };
-
-struct platform_device msm_device_mdp = {
-	.name = "msm_mdp",
-	.id = 0,
-	.num_resources = ARRAY_SIZE(resources_mdp),
-	.resource = resources_mdp,
-};
+/* DTS2011062802725 zhengzhechu 20110630 end> */
+int __init hw_extern_sdcard_add_device(void)
+{
+  platform_device_register(&hw_extern_sdcard_device);
+/* <DTS2011062802725 zhengzhechu 20110630 begin */  
+  platform_device_register(&hw_extern_sdcardMounted_device);
+/* DTS2011062802725 zhengzhechu 20110630 end> */
+  return 0;
+}
+#endif
+/* DTS2010092002892 duangan 20100926 end> */
 
 static struct resource msm_vidc_720p_resources[] = {
 	{
@@ -943,7 +851,7 @@ static struct resource msm_vidc_720p_resources[] = {
 };
 
 struct msm_vidc_platform_data vidc_platform_data = {
-	.memtype = MEMTYPE_EBI1,
+	.memtype = MEMTYPE_EBI0,
 	.enable_ion = 0,
 	.disable_dmx = 0
 };
@@ -1227,66 +1135,6 @@ void __init msm_fb_register_device(char *name, void *data)
 		printk(KERN_ERR "%s: unknown device! %s\n", __func__, name);
 }
 
-#ifdef CONFIG_MSM_RMT_STORAGE_SERVER
-#define RAMFS_INFO_MAGICNUMBER		0x654D4D43
-#define RAMFS_INFO_VERSION		0x00000001
-#define RAMFS_MODEMSTORAGE_ID		0x4D454653
-
-static struct resource rmt_storage_resources[] = {
-       {
-		.flags  = IORESOURCE_MEM,
-       },
-};
-
-static struct platform_device rmt_storage_device = {
-       .name           = "rmt_storage",
-       .id             = -1,
-       .num_resources  = ARRAY_SIZE(rmt_storage_resources),
-       .resource       = rmt_storage_resources,
-};
-
-int __init rmt_storage_add_ramfs(void)
-{
-	struct shared_ramfs_table *ramfs_table;
-	struct shared_ramfs_entry *ramfs_entry;
-	int index;
-
-	ramfs_table = smem_alloc(SMEM_SEFS_INFO,
-			sizeof(struct shared_ramfs_table));
-
-	if (!ramfs_table) {
-		printk(KERN_WARNING "%s: No RAMFS table in SMEM\n", __func__);
-		return -ENOENT;
-	}
-
-	if ((ramfs_table->magic_id != (u32) RAMFS_INFO_MAGICNUMBER) ||
-		(ramfs_table->version != (u32) RAMFS_INFO_VERSION)) {
-		printk(KERN_WARNING "%s: Magic / Version mismatch:, "
-		       "magic_id=%#x, format_version=%#x\n", __func__,
-		       ramfs_table->magic_id, ramfs_table->version);
-		return -ENOENT;
-	}
-
-	for (index = 0; index < ramfs_table->entries; index++) {
-		ramfs_entry = &ramfs_table->ramfs_entry[index];
-
-		/* Find a match for the Modem Storage RAMFS area */
-		if (ramfs_entry->client_id == (u32) RAMFS_MODEMSTORAGE_ID) {
-			printk(KERN_INFO "%s: RAMFS Info (from SMEM): "
-				"Baseaddr = 0x%08x, Size = 0x%08x\n", __func__,
-				ramfs_entry->base_addr, ramfs_entry->size);
-
-			rmt_storage_resources[0].start = ramfs_entry->base_addr;
-			rmt_storage_resources[0].end = ramfs_entry->base_addr +
-							ramfs_entry->size - 1;
-			msm_register_device(&rmt_storage_device, ramfs_entry);
-			return 0;
-		}
-	}
-	return -ENOENT;
-}
-#endif
-
 static struct platform_device msm_camera_device = {
 	.name	= "msm_camera",
 	.id	= 0,
@@ -1319,7 +1167,7 @@ struct resource kgsl_3d0_resources[] = {
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwrlevel = {
 		{
-			.gpu_freq = 245760000, /*Restore correct GPU frequency and bus frequency (Shaky156)*/
+			.gpu_freq = 245760000,
 			.bus_freq = 192000000,
 		},
 		{
@@ -1336,6 +1184,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.set_grp_async = set_grp3d_async,
 	.idle_timeout = HZ/20,
 	.nap_allowed = true,
+	.idle_needed = true,
 	.clk_map = KGSL_CLK_SRC | KGSL_CLK_CORE |
 		KGSL_CLK_IFACE | KGSL_CLK_MEM,
 };
@@ -1368,15 +1217,17 @@ static struct resource kgsl_2d0_resources[] = {
 static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.pwrlevel = {
 		{
-			.gpu_freq = 245760000, //Set 2D-core GPU Frequency @245mhz (Shaky156)
+			.gpu_freq = 0,
 			.bus_freq = 192000000,
 		},
 	},
 	.init_level = 0,
 	.num_levels = 1,
-	.set_grp_async = set_grp2d_async, //Set the 2D-core Graphics Clock Asynchronous to the AXI clock (Shaky156)
+	/* HW workaround, run Z180 SYNC @ 192 MHZ */
+	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
 	.nap_allowed = true,
+	.idle_needed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 };
 
@@ -1400,3 +1251,29 @@ struct platform_device *msm_footswitch_devices[] = {
 	FS_PCOM(FS_VPE,    "fs_vpe"),
 };
 unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
+
+static struct resource gpio_resources[] = {
+	{
+		.start	= INT_GPIO_GROUP1,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= INT_GPIO_GROUP2,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device msm_device_gpio = {
+	.name		= "msmgpio",
+	.id		= -1,
+	.resource	= gpio_resources,
+	.num_resources	= ARRAY_SIZE(gpio_resources),
+};
+
+static int __init msm7630_init_gpio(void)
+{
+	platform_device_register(&msm_device_gpio);
+	return 0;
+}
+
+postcore_initcall(msm7630_init_gpio);
