@@ -1,4 +1,7 @@
-# 3.4 kernel configuration for Huawei Ideos X5 U8800
+#
+# Automatically generated file; DO NOT EDIT.
+# Linux/arm 3.4.0 Kernel Configuration
+#
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
 CONFIG_HAVE_SCHED_CLOCK=y
