@@ -31,6 +31,7 @@
 #define LCD_ALL_FWVGA_45INCHTP     922  
 #define LCD_X_FWVGA 480
 #define LCD_Y_FWVGA 854
+#define LCD_ALL_WVGA_4INCHTP1     859
 #define LCD_ALL_QVGA        347
 #define LCD_ALL_HVGA_35INCHTP     538 /* 3.5 INCH TP */
 #define LCD_ALL_HVGA_32INCHTP     521  /* 3.2 INCH TP */

@@ -884,7 +884,7 @@ config MACH_FSM9XXX_SURF
 
 config  HUAWEI_KERNEL
 	bool "HUAWEI Product"
-	depends on ARCH_MSM7X27A
+	depends on ARCH_MSM7X30
 	default n
 	help
 	  Support for the HUAWEI board.
@@ -2682,7 +2682,13 @@ config HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
 	tristate "Huawei stop vibratting with timer"	
 	default n
 	help
-	  if Y ,select HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF 
+	  if Y ,select HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
+
+config MACH_MSM7X30_U8800
+	depends on ARCH_MSM7X30
+	default y
+	help
+	  Support for the Huawei U8800 board
 
 config HUAWEI_U8800PP1_WIFI_LOW_CONSUME
 	depends on MACH_MSM7X30_U8800
