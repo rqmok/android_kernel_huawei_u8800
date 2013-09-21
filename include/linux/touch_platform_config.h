@@ -46,6 +46,9 @@ struct tp_resolution_conversion{
 struct touch_hw_platform_data {
 	int (*touch_power)(int on);	/* Only valid in first array entry */
 	int (*set_touch_interrupt_gpio)(void);/*it will config the gpio*/
+	int (*touch_gpio_config_interrupt)(void)
+	int (*get_touch_reset_pin)(void)
+	int (*get_phone_version)(struct tp_resolution_conversion *tp_resolution_type)
     void (*set_touch_probe_flag)(int detected);/*we use this to detect the probe is detected*/
     int (*read_touch_probe_flag)(void);/*when the touch is find we return a value*/
 	int (*touch_reset)(void);
