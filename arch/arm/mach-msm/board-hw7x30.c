@@ -30,7 +30,7 @@
 #include <linux/smsc911x.h>
 #include <linux/ofn_atlab.h>
 #include <linux/power_supply.h>
-#include <linux/input/pmic8xxx-keypad.h>
+#include <linux/input/pmic8058-keypad.h>
 #include <linux/i2c/isa1200.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/input/kp_flip_switch.h>
@@ -67,7 +67,7 @@
 #include <mach/socinfo.h>
 #include <linux/audio_amplifier.h>
 #include <mach/msm_memtypes.h>
-#include <linux/cyttsp-qc.h>
+#include <linux/cyttsp.h>
 //porting wifi driver for 7x30 platform
 #ifdef CONFIG_HUAWEI_WIFI_SDCC
 #include <linux/wifi_tiwlan.h>
