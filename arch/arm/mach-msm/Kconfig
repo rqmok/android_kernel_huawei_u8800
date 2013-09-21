@@ -884,7 +884,6 @@ config MACH_FSM9XXX_SURF
 
 config  HUAWEI_KERNEL
 	bool "HUAWEI Product"
-	depends on ARCH_MSM7X30
 	default n
 	help
 	  Support for the HUAWEI board.
